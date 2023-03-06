@@ -89,7 +89,7 @@ class XYSystem():
         energy=np.average(dic_thermal_t['energy'][int(nstates/2):])
         self.energy = energy
         energy2=np.average(np.power(dic_thermal_t['energy'][int(nstates/2):],2))
-        self.Cv=(energy2-energy**2)*beta**2
+        self.Cv=(energy2-energy**2)*beta**2 * self.num_spins
 
     ## To see thermoquantities evolve as we cooling the systems down
     # input: T_inital: initial tempreature
