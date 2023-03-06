@@ -62,7 +62,7 @@ class XYSystem():
         return energy_
         
     ## Let the system evolve to equilibrium state
-    def equilibrate(self,max_nsweeps=int(1e4),temperature=None,H=None,show = False):
+    def equilibrate(self,max_nsweeps=int(1e7),temperature=None,H=None,show = False):
         if temperature != None:
             self.temperature = temperature
         dic_thermal_t = {}
@@ -70,7 +70,7 @@ class XYSystem():
         beta = 1.0/self.temperature
         energy_temp = 0
         for k in list(range(max_nsweeps)):
-            self.sweep()     
+            self.sweep()
             #list_M.append(np.abs(np.sum(S)/N))
             energy = np.sum(self.get_energy())/self.num_spins/2
             dic_thermal_t['energy'] += [energy]
@@ -79,42 +79,52 @@ class XYSystem():
                 print('#sweeps=%i'% (k+1))
                 print('energy=%.2f'%energy)
                 self.show()
-            if ((abs(energy-energy_temp)/abs(energy)<1e-4) & (k>500)) or k == max_nsweeps-1:
+            if ((abs(energy-energy_temp)/abs(energy)<1e-5) & (k>5000)) or k == max_nsweeps-1:
                 print('\nequilibrium state is reached at T=%.1f'%self.temperature)
                 print('#sweep=%i'%k)
                 print('energy=%.2f'%energy)
                 break
             energy_temp = energy
         nstates = len(dic_thermal_t['energy'])
-        energy=np.average(dic_thermal_t['energy'][int(nstates/2):])
+        energy=np.average(dic_thermal_t['energy'][int(nstates/3):])
         self.energy = energy
-        energy2=np.average(np.power(dic_thermal_t['energy'][int(nstates/2):],2))
+        energy2=np.average(np.power(dic_thermal_t['energy'][int(nstates/3):],2))
         self.Cv=(energy2-energy**2)*beta**2 * self.num_spins
 
     ## To see thermoquantities evolve as we cooling the systems down
     # input: T_inital: initial tempreature
     #        T_final: final temperature
     #        sample/'log' or 'lin',mean linear sampled T or log sampled( centered at critical point)
-    def annealing(self,T_init=2.5,T_final=0.1,nsteps = 20,show_equi=False):
+    def annealing(self, beta_init=2.5, beta_final=0.1,nsteps = 20,show_equi=False, save=True):
         # initialize spins. Orientations are taken from 0 - 2pi randomly.
-        #initialize spin configuration  
+        #initialize spin configuration
         dic_thermal = {}
-        dic_thermal['temperature']=list(np.linspace(T_init,T_final,nsteps))
+        dic_thermal['betaLst']=list(np.linspace(beta_init, beta_final,nsteps))
         dic_thermal['energy']=[]
         dic_thermal['Cv']=[]
-        for T in dic_thermal['temperature']:
+        for beta in dic_thermal['betaLst']:
+            T = 1/beta
             self.equilibrate(temperature=T)
             if show_equi:
                 self.show()
             dic_thermal['energy'] += [self.energy]
             dic_thermal['Cv'] += [self.Cv]
-        plt.plot(dic_thermal['temperature'],dic_thermal['Cv'],'.')
+
+        plt.figure()
+        plt.plot(dic_thermal['betaLst'],dic_thermal['Cv'],'.')
         plt.ylabel(r'$C_v$')
-        plt.xlabel('T')
-        plt.show()
-        plt.plot(dic_thermal['temperature'],dic_thermal['energy'],'.')
+        plt.xlabel('beta')
+        if save:
+            plt.savefig("CVplot.pdf")
+
+
+        plt.figure()
+        plt.plot(dic_thermal['betaLst'],dic_thermal['energy'],'.')
         plt.ylabel(r'$\langle E \rangle$')
-        plt.xlabel('T')
+        plt.xlabel('beta')
+
+        if save:
+            plt.savefig("meanEplot.pdf")
         plt.show()
         return dic_thermal
 
@@ -141,3 +151,11 @@ class XYSystem():
         plt.title('T=%.2f'%self.temperature+', #spins='+str(self.width)+'x'+str(self.width))
         plt.axis('off')
         plt.show()
+
+
+if __name__ == "__main__":
+    xy_system = XYSystem(temperature  = 0.5, width = 16)
+    cool_dat = xy_system.annealing(beta_init=0.6, beta_final=1.4,nsteps = 100,show_equi=False, save=True)
+    with open("./data.npy", "wb") as f:
+        for term in cool_dat.values():
+            np.save(f, term)
