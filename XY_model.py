@@ -25,6 +25,7 @@ class XYSystem():
                     (i // L) * L + (i - 1) % L, (i - L) % N) \
                                             for i in list(range(N))}
         self.spin_config = np.random.random(self.num_spins)*2*pi
+        self.spin_config[-1] = -np.pi
         self.temperature = temperature
         self.energy = np.sum(self.get_energy())/self.num_spins
         self.M = []
@@ -36,7 +37,7 @@ class XYSystem():
     
     def sweep(self):
         beta = 1.0 / self.temperature
-        spin_idx = list(range(self.num_spins))
+        spin_idx = list(range(self.num_spins - 1))
         random.shuffle(spin_idx)
         for idx in spin_idx:#one sweep in defined as N attempts of flip
             #k = np.random.randint(0, N - 1)#randomly choose a spin
@@ -79,7 +80,7 @@ class XYSystem():
                 print('#sweeps=%i'% (k+1))
                 print('energy=%.2f'%energy)
                 self.show()
-            if ((abs(energy-energy_temp)/abs(energy)<1e-5) & (k>5000)) or k == max_nsweeps-1:
+            if ((abs(energy-energy_temp)/abs(energy)<1e-5) & (k>3000)) or k == max_nsweeps-1:
                 print('\nequilibrium state is reached at T=%.1f'%self.temperature)
                 print('#sweep=%i'%k)
                 print('energy=%.2f'%energy)
@@ -155,7 +156,7 @@ class XYSystem():
 
 if __name__ == "__main__":
     xy_system = XYSystem(temperature  = 0.5, width = 16)
-    cool_dat = xy_system.annealing(beta_init=0.6, beta_final=1.4,nsteps = 100,show_equi=False, save=True)
+    cool_dat = xy_system.annealing(beta_init=0.6, beta_final=1.4,nsteps = 50,show_equi=False, save=True)
     with open("./data.npy", "wb") as f:
         for term in cool_dat.values():
             np.save(f, term)
